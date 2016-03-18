@@ -7,43 +7,39 @@ import psycopg2
 import bleach
 from collections import deque
 
-
-def connect():
+def connect(database_name="tournament"):
     """Connect to the PostgreSQL database.  Returns a database connection."""
-    return psycopg2.connect("dbname=tournament")
+    try:
+        db = psycopg2.connect("dbname={}".format(database_name))
+        cursor = db.cursor()
+        return db, cursor
+    except:
+        print("<your error message>")
 
 def closeConnection( conn ):
     conn.close()
 
 def deleteMatches():
     """Remove all the match records from the database."""
-    conn = connect()
-    cur = conn.cursor()
-    cur.execute("DELETE from matches")
-    conn.commit()
-    cur.close()
-    conn.close()
+    db, cur = connect()
+    cur.execute("TRUNCATE TABLE matches")
+    db.commit()
+    db.close()
 
 def deletePlayers():
     """Remove all the player records from the database."""
-    conn = connect()
-    cur = conn.cursor()
-    cur.execute("DELETE from players")
-    conn.commit()
-    cur.close()
-    conn.close()
-
+    db, cur = connect()
+    cur.execute("TRUNCATE TABLE matches, players")
+    db.commit()
+    db.close()
 
 def countPlayers():
     """Returns the number of players currently registered."""
-    conn = connect()
-    cur = conn.cursor()
+    db, cur = connect()
     cur.execute("SELECT count(*) as num FROM players")
     result = cur.fetchone()[0]
-    cur.close()
-    conn.close()
+    db.close()
     return result
-
 
 def registerPlayer(name):
     """Adds a player to the tournament database.
@@ -56,28 +52,25 @@ def registerPlayer(name):
     """
     #Sanitize data for insertion
     name = bleach.clean(name)
-    
-    conn = connect()
-    cur = conn.cursor()
+
+    db, cur = connect()
     sql = "INSERT INTO players (name) VALUES (%s)"
     data = (name, )
     cur.execute(sql, data) 
-    conn.commit()
-    cur.close()
-    conn.close()
+    db.commit()
+    db.close()
 
-def isPlayerById(iden):
+def isPlayerById(identifier):
     # Sanitize data for insertion.
-    iden = bleach.clean(iden)
+    identifier = bleach.clean(identifier)
     
-    conn = connect()
-    cur = conn.cursor()
+    db, cur = connect()
     sql = "SELECT * FROM checkplayer(%s)"
-    data = (iden, )
+    data = (identifier, )
     cur.execute(sql, data)
     result = cur.fetchone()[0]
+    db.close()
     return result
-
 
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
@@ -92,13 +85,10 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
-    conn = connect()
-    cur = conn.cursor()
+    db, cur = connect()
     cur.execute("SELECT * FROM standings")
     result = cur.fetchall()
-    conn.commit()
-    cur.close()
-    conn.close()
+    db.close()
     return result
 
 def reportMatch(winner, loser):
@@ -118,14 +108,12 @@ def reportMatch(winner, loser):
     if checkPairing(winner, loser):
         raise ValueError("This pairing of players has already been matched during this tournament")
     
-    conn = connect()
-    cur = conn.cursor()
+    db, cur = connect()
     sql = "INSERT INTO matches (winner, loser) VALUES (%s, %s)"
     data = (winner, loser, )
     cur.execute(sql, data) 
-    conn.commit()
-    cur.close()
-    conn.close()
+    db.commit()
+    db.close()
  
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
@@ -155,8 +143,7 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-    conn = connect()
-    cur = conn.cursor()
+    db, cur = connect()
     cur.execute("SELECT * FROM standings")
     result = []
 
@@ -195,9 +182,8 @@ def swissPairings():
             queue.append(player2)
             player2 = cur.fetchone()
           
-    conn.commit()
-    cur.close()
-    conn.close()
+    db.commit()
+    db.close()
     #print(result)
     return result
 
@@ -225,11 +211,10 @@ def checkPairing(player1, player2):
     if not isPlayerById(player2):
         return False
     
-    conn = connect()
-    cur = conn.cursor()
+    db, cur = connect()
     sql = "SELECT * FROM checkpairing(%s,%s)"
     data = (player1, player2, )
     cur.execute(sql, data)
     result = cur.fetchone()[0]
+    db.close()
     return result
-
