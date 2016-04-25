@@ -1,0 +1,34 @@
+<html>
+<head>
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<h1>Add New Item</h1>
+
+<form method='POST' enctype='multipart/form-data' action='{{ url_for('newItem') }}'>
+<input name="name" type="text" placeholder="name" ></br>
+<select name="category">
+{% for c in categories %}
+    <option
+    {% if selectedcategory == c.name %}
+    	selected value="{{c.name}}">{{c.name}}
+    {% else %}	
+    	value="{{c.name}}">{{c.name}}
+    {% endif %}
+    </option>
+{% endfor %}
+</select></br>
+<textarea name="description" placeholder="description" rows="5" cols="50"></textarea></br>
+<input type="submit" value="Submit">
+<a href='{{ url_for('showCatalog') }}'>Cancel</a></br>
+
+{% if selectedcategory == "" %}
+	<input type="text" name="preselectedcat" value="no" hidden="true">
+{% else %}
+	<input type="text" name="preselectedcat" value="yes" hidden="true">
+{% endif %}
+</form>
+
+</body>
+</html>

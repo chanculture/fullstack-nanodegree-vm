@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel=stylesheet type=text/css href="{{ url_for('static', filename='bootstrap.min.css') }}">
+        <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
+    </head>
+<body>
+
+<h1>Categories</h1>
+
+<h2><a href='{{ url_for('newItem') }}'>Add New Item</a></h2>
+<h2><a href='{{ url_for('showUsers') }}'>Testing: Show Users</a></h2>
+<h2><a href='{{ url_for('disconnect') }}'>Logout</a></h2>
+
+</br>
+{% for i in categories %}
+
+<div>
+
+<h2><a href='{{ url_for('showCategoryItems', categoryname=i.name) }}'>{{i.name}}</a></h2>
+
+</br>
+
+</div>
+
+{% endfor %}
+</body>
+</html>

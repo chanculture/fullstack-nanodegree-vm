@@ -1,0 +1,28 @@
+<html>
+<head>
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<h1>Edit {{ item.name }}</h1>
+
+<form method='POST' enctype='multipart/form-data' action='{{ url_for('editItem', categoryname=item.category.name, itemname=item.name) }}'>
+<input name="name" type="text" value="{{ item.name }}" ></br>
+<select name="category">
+{% for c in categories %}
+    <option
+    {% if item.category.name == c.name %}
+    	selected value="{{c.name}}">{{c.name}}
+    {% else %}	
+    	value="{{c.name}}">{{c.name}}
+    {% endif %}
+    </option>
+{% endfor %}
+  </select> </br>
+<textarea name="description" rows="5" cols="50">{{ item.description }}</textarea></br>
+<input type="submit" value="Edit">
+<a href='{{ url_for('showCategoryItems', categoryname=item.category.name) }}'>Cancel</a>
+</form>
+
+</body>
+</html>

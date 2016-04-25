@@ -1,0 +1,23 @@
+<html>
+<head>
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<h1>Users</h1>
+</br>
+<a href='{{ url_for('showCatalog') }}'>Go Back to Catalog</a></br>
+
+</br>
+
+{% for u in users %}
+<div>
+
+<p>{{u.id}}, {{u.name}}, {{u.email}}</p></br>
+</br>
+
+</div>
+{% endfor %}
+</body>
+
+</html>
