@@ -1,27 +1,40 @@
-<html>
-<head>
-    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
 
-<h1>Add New Item</h1>
+<div class="row">
+	<div class="col-md-12">
+		<h1>Add New Item</h1>
+	</div>
+</div>
 
 <form method='POST' enctype='multipart/form-data' action='{{ url_for('newItem') }}'>
-<input name="name" type="text" placeholder="name" ></br>
-<select name="category">
-{% for c in categories %}
-    <option
-    {% if selectedcategory == c.name %}
-    	selected value="{{c.name}}">{{c.name}}
-    {% else %}	
-    	value="{{c.name}}">{{c.name}}
-    {% endif %}
-    </option>
-{% endfor %}
-</select></br>
-<textarea name="description" placeholder="description" rows="5" cols="50"></textarea></br>
-<input type="submit" value="Submit">
-<a href='{{ url_for('showCatalog') }}'>Cancel</a></br>
+
+<div class="row">
+	<div class="col-md-12">
+		<input name="name" type="text" placeholder="name" >
+	</div>
+	<div class="col-md-12">
+		<select name="category">
+		{% for c in categories %}
+    		<option
+    		{% if selectedcategory == c.name %}
+    		selected value="{{c.name}}">{{c.name}}
+    		{% else %}	
+    		value="{{c.name}}">{{c.name}}
+    		{% endif %}
+    		</option>
+		{% endfor %}
+		</select>
+	</div>
+	<div class="col-md-12">
+		<textarea name="description" placeholder="description" rows="5" cols="50"></textarea>
+	</div>
+	<div class="col-md-12">
+		<input type="submit" value="Submit">
+		<a href='{{ url_for('showCatalog') }}'>Cancel</a></br>
+	</div>
+</div>
 
 {% if selectedcategory == "" %}
 	<input type="text" name="preselectedcat" value="no" hidden="true">
@@ -30,5 +43,4 @@
 {% endif %}
 </form>
 
-</body>
-</html>
+{% endblock %}

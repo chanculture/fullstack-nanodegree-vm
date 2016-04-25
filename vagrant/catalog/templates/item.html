@@ -1,30 +1,40 @@
-<html>
-<head>
-    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
 
-<h1>{{ item.name }}</h1>
-<h2>{{ item.category.name }}</h2>
-</br>
-<a href='{{ url_for('showCategoryItems', categoryname=item.category.name) }}'>Go Back to {{item.category.name}} Items</a></br>
-</br>
-</br>
-
-<div>
-
-<h2>{{item.name}}</h2>
-<p>{{item.description}}<p>
-<p> {{item.category.name}}</p>
-{% if item.user.id == user.id: %}
-<a href='{{ url_for('editItem', categoryname=item.category.name, itemname=item.name )}}'>Edit</a></br>
-<a href='{{ url_for('deleteItem', categoryname=item.category.name, itemname=item.name )}}'>Delete</a></br>
-{% endif %}
-
-</br>
-
+<div class="row banner">
+	<div class="col-md-6">
+		<h1>{{ item.name }}</h1>
+	</div>
+	<div class="col-md-6 text-right muted">
+		<h1>{{ item.category.name }}</h1>
+	</div>
+</div>
+<div class="row">
+	<div class="col-md-4">
+		<a href='{{ url_for('showCategoryItems', categoryname=item.category.name) }}'>Go Back to {{item.category.name}} Items</a>
+	</div>
+	<div class="col-md-8 text-right">
+		<a href='{{ url_for('newItem') }}'>Add New Item</a>
+	</div>
 </div>
 
-</body>
+<div class="row">
+	<div class="col-md-2">
+		<h4>{{item.name}}</h4>
+	</div>
+	<div class="col-md-8">
+		<h5>{{item.description}}</h5>
+	</div>
+	<div class="col-md-2 text-center">
+		{% if item.user.id == user.id and user != None: %}
+		<a href='{{ url_for('editItem', categoryname=item.category.name, itemname=item.name )}}'>Edit</a>
+		|
+		<a href='{{ url_for('deleteItem', categoryname=item.category.name, itemname=item.name )}}'>Delete</a>
+		{% else: %}
+		
+		{% endif %}
+	</div>
+</div>
 
-</html>
+{% endblock %}

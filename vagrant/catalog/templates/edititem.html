@@ -1,8 +1,6 @@
-<html>
-<head>
-    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
 
 <h1>Edit {{ item.name }}</h1>
 
@@ -24,5 +22,4 @@
 <a href='{{ url_for('showCategoryItems', categoryname=item.category.name) }}'>Cancel</a>
 </form>
 
-</body>
-</html>
+{% endblock %}

@@ -1,28 +1,52 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <link rel=stylesheet type=text/css href="{{ url_for('static', filename='bootstrap.min.css') }}">
-        <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
-    </head>
-<body>
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
 
-<h1>Categories</h1>
-
-<h2><a href='{{ url_for('newItem') }}'>Add New Item</a></h2>
-<h2><a href='{{ url_for('showUsers') }}'>Testing: Show Users</a></h2>
-<h2><a href='{{ url_for('disconnect') }}'>Logout</a></h2>
-
-</br>
-{% for i in categories %}
-
-<div>
-
-<h2><a href='{{ url_for('showCategoryItems', categoryname=i.name) }}'>{{i.name}}</a></h2>
-
-</br>
-
+<div class="row top-menu">
+		<div class="col-md-10"></div>
+		<div class="col-md-2 text-right"></div>
 </div>
+<div class="row divider blue">
+		<div class="col-md-12"></div>
+</div>
+<div class="row banner main">
+	<div class="col-md-12 padding-none">
+		<h1>Categories</h1>
+	</div>
+</div>
+<div class="row banner sub1">
+	<div class="col-md-4">
+		<a href='{{ url_for('newItem') }}'>Add New Item</a>
+	</div>
+	<div class="col-md-8 text-right">
+		<a href='{{ url_for('showUsers') }}'>Show Users</a>
+	</div>
+</div>
+</br>
+
+<!-- SIDE BAR-->
+<div class="row">
+</div>
+<div class="col-md-3 nav nav-sidebar">
+	<ul>
+{% for c in categories %}
+
+<li class="active"><a href='{{ url_for('showCategoryItems', categoryname=c.name) }}'><p>{{c.name}}</p></a></li>
 
 {% endfor %}
-</body>
-</html>
+	</ul>
+</div>
+<!-- END SIDE BAR-->
+
+<div class="col-md-9 text-center mainwindow">
+	<h2>Latest 10 Items Added to Catalog</h2>
+	<!--<div class="row placeholders">-->
+	{% for i in items %}
+		<div class="col-md-12">
+		<a href='{{ url_for('showItem', categoryname=i.category.name, itemname=i.name )}}'>{{i.name + ", " + i.category.name}}</a> 
+		</div>
+	{% endfor %}
+	<!--</div>-->
+</div>
+
+{% endblock %}

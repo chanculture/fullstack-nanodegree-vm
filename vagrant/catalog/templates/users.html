@@ -1,23 +1,25 @@
-<html>
-<head>
-    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
 
-<h1>Users</h1>
-</br>
-<a href='{{ url_for('showCatalog') }}'>Go Back to Catalog</a></br>
-
-</br>
+<div class="row banner main">
+	<div class="col-md-12 padding-none">
+		<h1>Users</h1>
+	</div>
+</div>
+<div class="row">
+	<div class="col-md-4">
+		<a href='{{ url_for('showCatalog') }}'>Go Back to Catalog</a></br>
+	</div>
+	<div class="col-md-8 text-right">
+	</div>
+</div>
 
 {% for u in users %}
-<div>
-
-<p>{{u.id}}, {{u.name}}, {{u.email}}</p></br>
-</br>
-
+<div class="row">
+	<div class="col-md-12 col-md-offset-1">
+		<p>{{u.id}}, {{u.name}}, {{u.email}}</p>
+	</div>
 </div>
 {% endfor %}
-</body>
-
-</html>
+{% endblock %}
