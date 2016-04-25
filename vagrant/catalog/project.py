@@ -8,8 +8,6 @@ from sqlalchemy.orm import sessionmaker
 from flask import session as login_session
 import random, string, json
 
-
-# IMPORTS FOR THIS STEP
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 import httplib2
@@ -18,7 +16,7 @@ import requests
 
 app = Flask(__name__)
 
-CLIENT_ID = json.loads(open('client_secrets.json', 'r').read())['web']['client_id']
+CLIENT_ID = json.loads(open('g_client_secrets.json', 'r').read())['web']['client_id']
 #APPLICATION_NAME = "Udacity P3: Item Catalog"
 
 # which database are we connecting to
@@ -57,7 +55,7 @@ def gconnect():
     print "marker 1"
     try:
         # Upgrade the authorization code into a credentials object
-        oauth_flow = flow_from_clientsecrets('client_secrets.json', scope='')
+        oauth_flow = flow_from_clientsecrets('g_client_secrets.json', scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
     except FlowExchangeError:
@@ -274,8 +272,12 @@ def createUser(login_session):
     user = session.query(User).filter_by(email=login_session['email']).one()
     return user.id
 
-def getUserInfo(user_id):
-    user = session.query(User).filter_by(id=user_id).one()
+def getUserInfo():
+    if 'user_id' not in login_session:
+        user = None
+    else:
+        user_id = login_session['user_id']
+        user = session.query(User).filter_by(id=user_id).one()
     return user
 
 def getUserID(email):
@@ -292,6 +294,11 @@ def checkUserExists():
     login_session['user_id'] = user_id
     return user_id
 
+def checkUserLoggedInStatus():
+    if 'user_id' not in login_session:
+        return False
+    return True
+
 # API Extensions
 
 @app.route('/catalog/JSON')
@@ -302,7 +309,7 @@ def catalogJSON():
 @app.route('/catalog/<string:categoryname>/JSON')
 def categoryItemsJSON(categoryname):
     category = session.query(Category).filter_by(name=categoryname).one()
-    items = session.query(Item).filter_by(category_id=category.id)
+    items = session.query(Item).filter_by(category_id=category.id).all()
     return jsonify(Items=[i.serialize for i in items])
 
 @app.route('/catalog/categories/JSON')
@@ -310,26 +317,32 @@ def categoriesJSON():
     categories = session.query(Category).all()
     return jsonify(Category=[i.serialize for i in categories])
 
+@app.route('/catalog/<string:categoryname>/<string:itemname>/JSON')
+def itemJSON(categoryname, itemname):
+    category = session.query(Category).filter_by(name=categoryname).one()
+    item = session.query(Item).filter_by(category_id=category.id, name=itemname).one()
+    return jsonify(Item=item.serialize)
+
 @app.route('/')
 @app.route('/catalog/')
 def showCatalog():
     categories = session.query(Category).all()
     # TODO: order by descending
-    items = session.query(Item).order_by(Item.date_added)
+    items = session.query(Item).order_by(Item.date_added.desc()).limit(10)
     return render_template('catalog.html', categories=categories, items=items)
 
 @app.route('/catalog/<string:categoryname>/items')
 def showCategoryItems(categoryname):
     category = session.query(Category).filter_by(name=categoryname).one()
     items = session.query(Item).filter_by(category=category)
-    user = getUserInfo(login_session['user_id'])
+    user = getUserInfo()
     return render_template('items.html', items=items, category=category, user=user)
 
 @app.route('/catalog/<string:categoryname>/<string:itemname>')
 def showItem(categoryname, itemname):
     category = session.query(Category).filter_by(name=categoryname).one()
     item = session.query(Item).filter_by(name=itemname, category=category).one()
-    user = getUserInfo(login_session['user_id'])
+    user = getUserInfo()
     return render_template('item.html', item=item, user=user)
 
 @app.route('/catalog/item/new', methods=['GET', 'POST'])
@@ -376,7 +389,7 @@ def newItemFromCategory(categoryname):
 def editItem(categoryname, itemname):
     if 'username' not in login_session:
         return redirect('/login')
-    user = getUserInfo(login_session['user_id'])
+    user = getUserInfo()
     category = session.query(Category).filter_by(name=categoryname).one()
     itemForEdit = session.query(Item).filter_by(name=itemname, category=category).one()
     if itemForEdit.user_id != user.id:
@@ -404,7 +417,7 @@ def deleteItem(categoryname, itemname):
         return redirect('/login')
     category = session.query(Category).filter_by(name=categoryname).one()
     itemForDelete = session.query(Item).filter_by(name=itemname, category=category).first()
-    user = getUserInfo(login_session['user_id'])
+    user = getUserInfo()
     if itemForDelete.user_id != user.id:
         flash("You are not authorized to delete that item")
         return redirect(url_for('showCategoryItems', categoryname=categoryname))
