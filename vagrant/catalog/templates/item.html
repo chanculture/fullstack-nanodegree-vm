@@ -2,7 +2,7 @@
 {% block content %}
 {% include "header.html" %}
 
-<div class="row banner">
+<div class="row banner main">
 	<div class="col-md-6">
 		<h1>{{ item.name }}</h1>
 	</div>
@@ -10,7 +10,7 @@
 		<h1>{{ item.category.name }}</h1>
 	</div>
 </div>
-<div class="row">
+<div class="row banner sub1">
 	<div class="col-md-4">
 		<a href='{{ url_for('showCategoryItems', categoryname=item.category.name) }}'>Go Back to {{item.category.name}} Items</a>
 	</div>

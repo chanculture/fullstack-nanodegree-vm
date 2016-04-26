@@ -2,12 +2,12 @@
 {% block content %}
 {% include "header.html" %}
 
-<div class="row">
+<div class="row banner main">
 	<div class="col-md-12">
 		<h1>Add New Item</h1>
 	</div>
 </div>
-
+</br>
 <form method='POST' enctype='multipart/form-data' action='{{ url_for('newItem') }}'>
 
 <div class="row">
@@ -32,7 +32,11 @@
 	</div>
 	<div class="col-md-12">
 		<input type="submit" value="Submit">
-		<a href='{{ url_for('showCatalog') }}'>Cancel</a></br>
+		{% if selectedcategory == "" %}
+		<button> <a href='{{ url_for('showCatalog') }}'>Cancel</a> </button>
+		{% else %}
+		<button> <a href='{{ url_for('showCategoryItems', categoryname=selectedcategory) }}'>Cancel</a> </button>
+		{% endif %}
 	</div>
 </div>
 

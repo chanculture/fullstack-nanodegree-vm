@@ -15,6 +15,7 @@ h1 {
 h2 {
 	font-size: 24px;
 	line-height: 29px;
+	font-weight: lighter;
 }
 
 h3 {
@@ -43,6 +44,11 @@ a:hover,focus {
 
 ul {
     list-style-type: none;
+}
+
+form, button > a {
+	color:#0C5582;
+	font-weight: 200;
 }
 
 .top-menu {
