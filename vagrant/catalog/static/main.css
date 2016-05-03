@@ -51,6 +51,10 @@ form, button > a {
 	font-weight: 200;
 }
 
+.label {
+	color: #ffffff;
+}
+
 .top-menu {
 	background-color: #05283C;
 }

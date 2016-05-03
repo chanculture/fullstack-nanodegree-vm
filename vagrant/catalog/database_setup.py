@@ -48,7 +48,8 @@ class Item(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
-    description = Column(String(250), nullable=True)
+    description = Column(String(250))
+    image_url = Column(String(250))
     date_added = Column(DateTime, default=datetime.datetime.utcnow)
     user_id = Column(Integer,ForeignKey('user.id'))
     user = relationship(User)

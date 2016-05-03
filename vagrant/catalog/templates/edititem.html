@@ -22,6 +22,26 @@
 {% endfor %}
   </select> </br>
 <textarea name="description" rows="5" cols="50">{{ item.description }}</textarea></br>
+
+<div class="row">
+	<div class="col-md-12 label">
+		Image:<input type="file" name="file"> </br></br>
+	</div>
+	
+</div>
+<div class="row">
+	{% if item.image_url != None and item.image_url != "" %}
+	<div class="col-md-8">
+	<img class="img-responsive center-block" src="{{ url_for('static', filename=itemimagepath + item.image_url) }}"> </br>
+	</div>
+	<div class="col-md-4">
+	</div>
+	<div class="col-md-12 label">
+		<button> <a href='{{ url_for('removeItemImage', categoryname=item.category.name, itemname=item.name) }}'>Remove Image</a> </button>
+		</br></br>
+	</div>
+	{% endif %}
+</div>
 <input type="submit" value="Edit">
 <!--<button type="button" onclick='{{ url_for('showCategoryItems', categoryname=item.category.name) }}'>Cancel</button>-->
 <button> <a href='{{ url_for('showCategoryItems', categoryname=item.category.name) }}'>Cancel</a> </button>

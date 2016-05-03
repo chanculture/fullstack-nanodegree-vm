@@ -14,8 +14,19 @@ import httplib2
 from flask import make_response
 import requests
 
+# Image Upload
+import os
+from flask import send_from_directory, send_file
+
+
 app = Flask(__name__)
 
+# These are the extension that we are accepting to be uploaded
+app.config['ALLOWED_EXTENSIONS'] = set(['png', 'jpg', 'jpeg', 'gif'])
+# Upload max file size 4MB
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024
+
+ITEM_IMAGE_PATH = "images/"
 CLIENT_ID = json.loads(open('g_client_secrets.json', 'r').read())['web']['client_id']
 #APPLICATION_NAME = "Udacity P3: Item Catalog"
 
@@ -30,6 +41,26 @@ Base.metadata.bind = engine
 # created above
 DBSession = sessionmaker(bind = engine)
 session = DBSession()
+
+# For a given file, return whether it's an allowed type or not
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1] in app.config['ALLOWED_EXTENSIONS']
+
+def uploadItemImage(file, item):
+    if file and allowed_file(file.filename):
+        # Make the filename safe, remove unsupported chars
+        filename = renameItemFilename(file.filename, item)
+        # Save the file to the static folder so flask can serve it later
+        file.save(os.path.join("static/", ITEM_IMAGE_PATH, filename))
+        return filename
+    else:
+        return ""
+
+def renameItemFilename(filename, item):
+    extension = filename.rsplit('.', 1)[1]
+    return str(item.id) + "." + extension
 
 # Create anti-forgery state token
 
@@ -343,7 +374,8 @@ def showItem(categoryname, itemname):
     category = session.query(Category).filter_by(name=categoryname).one()
     item = session.query(Item).filter_by(name=itemname, category=category).one()
     user = getUserInfo()
-    return render_template('item.html', item=item, user=user)
+    #print send_from_directory(app.config['UPLOAD_FOLDER'],item.image_url)
+    return render_template('item.html', item=item, user=user, itemimagepath=ITEM_IMAGE_PATH)
 
 @app.route('/catalog/item/new', methods=['GET', 'POST'])
 def newItem():
@@ -358,7 +390,14 @@ def newItem():
                 category=category,
                 user_id=login_session['user_id'])
             session.add(newItem)
+            # need to generate item.id to rename the file
             session.commit()
+            file = request.files['file']
+            if file != None:
+                newItem.image_url = uploadItemImage(file, newItem)
+                session.add(newItem)
+                session.commit()
+            # need a rollback function
             flash("Item Created")
         else:
             print "duplicate"
@@ -403,13 +442,16 @@ def editItem(categoryname, itemname):
         if request.form['category']:
             newcategory = session.query(Category).filter_by(name=request.form['category']).one()
             itemForEdit.category = newcategory
+        if request.files['file']:
+            file = request.files['file']
+            itemForEdit.image_url = uploadItemImage(file, itemForEdit)
         session.add(itemForEdit)
         session.commit()
         flash("Item Edited")
         return redirect(url_for('showCategoryItems', categoryname=categoryname))
     else:
         categories = session.query(Category).all()
-        return render_template('edititem.html', item=itemForEdit, categories=categories)
+        return render_template('edititem.html', item=itemForEdit, categories=categories, itemimagepath=ITEM_IMAGE_PATH)
 
 @app.route('/catalog/<string:categoryname>/<string:itemname>/delete', methods=['GET', 'POST'])
 def deleteItem(categoryname, itemname):
@@ -422,12 +464,33 @@ def deleteItem(categoryname, itemname):
         flash("You are not authorized to delete that item")
         return redirect(url_for('showCategoryItems', categoryname=categoryname))
     if request.method == 'POST':
+        if itemForDelete.image_url != "":
+            # TODO: ensure this delete happens
+            try:
+                os.remove(os.path.join("static/", ITEM_IMAGE_PATH, itemForDelete.image_url))
+            except OSError:
+                print "log: file was not deleted"
         session.delete(itemForDelete)
         session.commit()
         flash("Item Deleted")
         return redirect(url_for('showCategoryItems', categoryname=categoryname))
     else:
         return render_template('deleteitem.html', item=itemForDelete)
+
+@app.route('/catalog/<string:categoryname>/<string:itemname>/image/delete')
+def removeItemImage(categoryname, itemname):
+    category = session.query(Category).filter_by(name=categoryname).one()
+    item = session.query(Item).filter_by(name=itemname, category=category).first()
+    try:
+        os.remove(os.path.join("static/", ITEM_IMAGE_PATH, item.image_url))
+        item.image_url = ""
+        session.add(item)
+        session.commit()
+    except OSError:
+        print "log: file was not deleted"
+    print "item image deleted"
+    categories = session.query(Category).all()
+    return render_template('edititem.html', item=item, categories=categories, itemimagepath=ITEM_IMAGE_PATH)
 
 @app.route('/users')
 def showUsers():

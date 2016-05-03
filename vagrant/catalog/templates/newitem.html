@@ -14,6 +14,8 @@
 	<div class="col-md-12">
 		<input name="name" type="text" placeholder="name" >
 	</div>
+</div>
+<div class="row">
 	<div class="col-md-12">
 		<select name="category">
 		{% for c in categories %}
@@ -27,9 +29,18 @@
 		{% endfor %}
 		</select>
 	</div>
+</div>
+<div class="row">
 	<div class="col-md-12">
 		<textarea name="description" placeholder="description" rows="5" cols="50"></textarea>
 	</div>
+</div>
+<div class="row">
+	<div class="col-md-12 label">
+		Image:<input type="file" name="file"></br></br>
+	</div>
+</div>
+<div class="row">
 	<div class="col-md-12">
 		<input type="submit" value="Submit">
 		{% if selectedcategory == "" %}
@@ -38,6 +49,7 @@
 		<button> <a href='{{ url_for('showCategoryItems', categoryname=selectedcategory) }}'>Cancel</a> </button>
 		{% endif %}
 	</div>
+</div>
 </div>
 
 {% if selectedcategory == "" %}

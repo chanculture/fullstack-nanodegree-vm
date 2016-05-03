@@ -25,6 +25,9 @@
 	</div>
 	<div class="col-md-8">
 		<h5>{{item.description}}</h5>
+		{% if item.image_url != None and item.image_url != "" %}
+		<img class="img-responsive center-block" src="{{ url_for('static', filename=itemimagepath + item.image_url) }}">
+		{% endif %}
 	</div>
 	<div class="col-md-2 text-center">
 		{% if item.user.id == user.id and user != None: %}
