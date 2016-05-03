@@ -1,4 +1,5 @@
-from flask import Flask, render_template, url_for, request, redirect, flash, jsonify
+from flask import Flask, render_template, url_for, request, redirect, flash
+from flask import jsonify
 from database_setup import Base, User, Category, Item
 
 from sqlalchemy import create_engine
@@ -6,17 +7,23 @@ from sqlalchemy import asc
 from sqlalchemy.orm import sessionmaker
 
 from flask import session as login_session
-import random, string, json
+
+import random
+import string
+import json
+import httplib2
+import requests
 
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
-import httplib2
+
 from flask import make_response
-import requests
 
 # Imports for Image Upload
 import os
 from flask import send_from_directory, send_file
+
+from functools import wraps
 
 app = Flask(__name__)
 
@@ -26,7 +33,8 @@ app.config['ALLOWED_EXTENSIONS'] = set(['png', 'jpg', 'jpeg', 'gif'])
 app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024
 
 ITEM_IMAGE_PATH = "images/"
-CLIENT_ID = json.loads(open('g_client_secrets.json', 'r').read())['web']['client_id']
+CLIENT_ID = json.loads(
+    open('g_client_secrets.json', 'r').read())['web']['client_id']
 
 # which database are we connecting to
 engine = create_engine('sqlite:///itemcatalog.db')
@@ -37,14 +45,15 @@ Base.metadata.bind = engine
 
 # establishing link of communication between code execution and the engine
 # created above
-DBSession = sessionmaker(bind = engine)
+DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
-# For a given file, return whether it's an allowed type or not
 
+# For a given file, return whether it's an allowed type or not
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1] in app.config['ALLOWED_EXTENSIONS']
+
 
 def uploadItemImage(file, item):
     if file and allowed_file(file.filename):
@@ -57,22 +66,23 @@ def uploadItemImage(file, item):
         flash("Image File Type Not Allowed")
     return ""
 
+
 def renameItemFilename(filename, item):
     extension = filename.rsplit('.', 1)[1]
     return str(item.id) + "." + extension
 
-# Create anti-forgery state token
 
+# Create anti-forgery state token
 @app.route('/login')
 def showLogin():
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in xrange(32))
     login_session['state'] = state
-    #return "The current session state is %s" % login_session['state']
+    # return "The current session state is %s" % login_session['state']
     return render_template('login.html', state=state)
 
-# gConnect connect functions
 
+# gConnect connect functions
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
     # Validate state token
@@ -119,8 +129,8 @@ def gconnect():
     stored_credentials = login_session.get('credentials')
     stored_gplus_id = login_session.get('gplus_id')
     if stored_credentials is not None and gplus_id == stored_gplus_id:
-        response = make_response(json.dumps('Current user is already connected.'),
-                                 200)
+        response = make_response(json.dumps(
+            'Current user is already connected.'), 200)
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -147,10 +157,12 @@ def gconnect():
     output += '!</h1>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+    output += ' " style = "width: 300px; height: 300px;border-radius: 150px; '
+    output += ' -webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
     flash("you are now logged in as %s" % login_session['username'])
     print "done!"
     return output
+
 
 @app.route('/gdisconnect')
 def gdisconnect():
@@ -160,10 +172,12 @@ def gdisconnect():
     print login_session['username']
     if access_token is None:
         print 'Access Token is None'
-        response = make_response(json.dumps('Current user not connected.'), 401)
+        response = make_response(
+            json.dumps('Current user not connected.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
-    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % login_session['access_token']
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s'
+    url = url % login_session['access_token']
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
     print 'result is '
@@ -175,12 +189,13 @@ def gdisconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
     else:
-        response = make_response(json.dumps('Failed to revoke token for given user.', 400))
+        response = make_response(
+            json.dumps('Failed to revoke token for given user.', 400))
         response.headers['Content-Type'] = 'application/json'
         return response
 
-# Facebook connect functions
 
+# Facebook connect functions
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
     if request.args.get('state') != login_session['state']:
@@ -194,8 +209,10 @@ def fbconnect():
         'web']['app_id']
     app_secret = json.loads(
         open('fb_client_secrets.json', 'r').read())['web']['app_secret']
-    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
-        app_id, app_secret, access_token)
+    url = 'https://graph.facebook.com/oauth/access_token?'
+    url += 'grant_type=fb_exchange_token&client_id='
+    url += '%s&client_secret=%s&fb_exchange_token=%s'
+    url = url % (app_id, app_secret, access_token)
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
 
@@ -215,12 +232,15 @@ def fbconnect():
     login_session['email'] = data["email"]
     login_session['facebook_id'] = data["id"]
 
-    # The token must be stored in the login_session in order to properly logout, let's strip out the information before the equals sign in our token
+    # The token must be stored in the login_session in order to properly
+    # logout, let's strip out the information before the equals sign in
+    # our token
     stored_token = token.split("=")[1]
     login_session['access_token'] = stored_token
 
     # Get user picture
-    url = 'https://graph.facebook.com/v2.4/me/picture?%s&redirect=0&height=200&width=200' % token
+    url = 'https://graph.facebook.com/v2.4/me/picture?%s' % token
+    url += '&redirect=0&height=200&width=200'
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
     data = json.loads(result)
@@ -237,7 +257,8 @@ def fbconnect():
     output += '!</h1>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+    output += ' " style = "width: 300px; height: 300px;border-radius: 150px; '
+    output += ' -webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
 
     flash("Now logged in as %s" % login_session['username'])
     return output
@@ -248,10 +269,12 @@ def fbdisconnect():
     facebook_id = login_session['facebook_id']
     # The access token must me included to successfully logout
     access_token = login_session['access_token']
-    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id,access_token)
+    url = 'https://graph.facebook.com/%s/permissions?access_token=%s'
+    url = url % (facebook_id, access_token)
     h = httplib2.Http()
     result = h.request(url, 'DELETE')[1]
     return "you have been logged out"
+
 
 # Disconnect based on provider
 @app.route('/disconnect')
@@ -275,15 +298,52 @@ def disconnect():
         flash("You were not logged in")
         return redirect(url_for('showCatalog'))
 
-# User Helper Functions
 
+# Decorator function to ensure user is a registered user before performing
+# a restricted function
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in login_session:
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# Decorator function to ensure logged in user is the owner of the item before
+# allowing user to edit or delete an item.
+# IMPORTANT:  This decorator function required the wrapped function to take two
+# arguments:
+# <string>: categoryname
+# <string>: itemname
+# This is in order to identify the item in question and compare it to the
+# user logged in
+def ownership_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = getUserInfo()
+        categoryname = kwargs['categoryname']
+        itemname = kwargs['itemname']
+        category = session.query(Category).filter_by(name=categoryname).one()
+        item = session.query(Item).filter_by(
+            name=itemname, category=category).one()
+        if item.user_id != user.id:
+            flash("You are not authorized to modify that item")
+            return redirect(
+                url_for('showCategoryItems', categoryname=categoryname))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# User Helper Functions
 def createUser(login_session):
     newUser = User(name=login_session['username'], email=login_session[
-                   'email'], profile_picture    =login_session['picture'])
+                   'email'], profile_picture=login_session['picture'])
     session.add(newUser)
     session.commit()
     user = session.query(User).filter_by(email=login_session['email']).one()
     return user.id
+
 
 def getUserInfo():
     if 'user_id' not in login_session:
@@ -293,12 +353,14 @@ def getUserInfo():
         user = session.query(User).filter_by(id=user_id).one()
     return user
 
+
 def getUserID(email):
     try:
         user = session.query(User).filter_by(email=email).one()
         return user.id
     except:
         return None
+
 
 # Returns the database user.id if the user already exists
 # (determined by email address)
@@ -309,17 +371,13 @@ def checkUserExists():
     login_session['user_id'] = user_id
     return user_id
 
-def checkUserLoggedInStatus():
-    if 'user_id' not in login_session:
-        return False
-    return True
 
 # API Extensions
-
 @app.route('/catalog/JSON')
 def catalogJSON():
     items = session.query(Item).all()
     return jsonify(Items=[i.serialize for i in items])
+
 
 @app.route('/catalog/<string:categoryname>/JSON')
 def categoryItemsJSON(categoryname):
@@ -327,47 +385,68 @@ def categoryItemsJSON(categoryname):
     items = session.query(Item).filter_by(category_id=category.id).all()
     return jsonify(Items=[i.serialize for i in items])
 
+
 @app.route('/catalog/categories/JSON')
 def categoriesJSON():
     categories = session.query(Category).all()
     return jsonify(Category=[i.serialize for i in categories])
 
+
 @app.route('/catalog/<string:categoryname>/<string:itemname>/JSON')
 def itemJSON(categoryname, itemname):
     category = session.query(Category).filter_by(name=categoryname).one()
-    item = session.query(Item).filter_by(category_id=category.id, name=itemname).one()
+    item = session.query(Item).filter_by(
+        category_id=category.id, name=itemname).one()
     return jsonify(Item=item.serialize)
+
 
 @app.route('/')
 @app.route('/catalog/')
 def showCatalog():
     categories = session.query(Category).all()
-    # TODO: order by descending
     items = session.query(Item).order_by(Item.date_added.desc()).limit(10)
-    return render_template('catalog.html', categories=categories, items=items)
+    return render_template(
+        'catalog.html', categories=categories, items=items)
+
 
 @app.route('/catalog/<string:categoryname>/items')
 def showCategoryItems(categoryname):
     category = session.query(Category).filter_by(name=categoryname).one()
     items = session.query(Item).filter_by(category=category)
     user = getUserInfo()
-    return render_template('items.html', items=items, category=category, user=user)
+    return render_template(
+        'items.html', items=items, category=category, user=user)
+
 
 @app.route('/catalog/<string:categoryname>/<string:itemname>')
 def showItem(categoryname, itemname):
     category = session.query(Category).filter_by(name=categoryname).one()
-    item = session.query(Item).filter_by(name=itemname, category=category).one()
+    item = session.query(Item).filter_by(
+        name=itemname, category=category).one()
     user = getUserInfo()
-    #print send_from_directory(app.config['UPLOAD_FOLDER'],item.image_url)
-    return render_template('item.html', item=item, user=user, itemimagepath=ITEM_IMAGE_PATH)
+    # print send_from_directory(app.config['UPLOAD_FOLDER'],item.image_url)
+    return render_template(
+        'item.html', item=item, user=user, itemimagepath=ITEM_IMAGE_PATH)
+
 
 @app.route('/catalog/item/new', methods=['GET', 'POST'])
+@login_required
 def newItem():
-    if 'username' not in login_session:
-        return redirect('/login')
+    """
+    creates new database item.  commits an item then checks the newly
+        create item.id to rename an image file, if given, to the item.id
+    outputs:
+        :GET: renders template newitem.html
+        :POST: redirect to showCategoryItems or showCatalog depending on
+            the origin of the user. i.e. did they start from the catalog
+            home page (/catalog), or did they start from the a specific
+            selected category (/catalog/<string:categoryname>/items)
+    """
     if request.method == 'POST':
-        category = session.query(Category).filter_by(name=request.form['category']).one()
-        if session.query(Item).filter_by(name=request.form['name'], category=category).count() == 0:
+        category = session.query(Category).filter_by(
+            name=request.form['category']).one()
+        if session.query(Item).filter_by(
+                name=request.form['name'], category=category).count() == 0:
             newItem = Item(
                 name=request.form['name'],
                 description=request.form['description'],
@@ -377,47 +456,64 @@ def newItem():
             # need to generate item.id to rename the file
             session.commit()
             file = request.files['file']
-            if file != None:
+            if file is not None:
                 newItem.image_url = uploadItemImage(file, newItem)
                 session.add(newItem)
                 session.commit()
             flash("Item Created")
         else:
-            flash("Item with duplicate name already exists for the given category")
+            flash('''Item with duplicate name already
+                exists for the given category''')
 
         if request.form['preselectedcat'] == "yes":
-            return redirect(url_for('showCategoryItems', categoryname=category.name))
+            return redirect(
+                url_for('showCategoryItems', categoryname=category.name))
         else:
             return redirect(url_for('showCatalog'))
     else:
         categories = session.query(Category).all()
-        return render_template('newitem.html', categories=categories, selectedcategory="")
+        return render_template(
+            'newitem.html', categories=categories, selectedcategory="")
+
 
 # This routing is used to have a preselected category
 @app.route('/catalog/<string:categoryname>/item/new')
+@login_required
 def newItemFromCategory(categoryname):
-    if 'username' not in login_session:
-        return redirect('/login')
     categories = session.query(Category).all()
-    return render_template('newitem.html', categories=categories, selectedcategory=categoryname)
+    return render_template(
+        'newitem.html', categories=categories,
+        selectedcategory=categoryname)
 
-@app.route('/catalog/<string:categoryname>/<string:itemname>/edit', methods=['GET', 'POST'])
+
+@app.route(
+    '/catalog/<string:categoryname>/<string:itemname>/edit',
+    methods=['GET', 'POST'])
+@login_required
+@ownership_required
 def editItem(categoryname, itemname):
-    if 'username' not in login_session:
-        return redirect('/login')
-    user = getUserInfo()
+    """
+    edits an catalog item, retrieves new values from form POST
+    inputs:
+        :categoryname: <string> the category for which the item belongs,
+            should be the exact name as it exists in the database
+        :itemname: <string> the exact name of the item as it exists in the
+            database
+    outputs:
+        :GET: renders template edititem.html
+        :POST: redirect to showCategoryItems after modifying the item
+    """
     category = session.query(Category).filter_by(name=categoryname).one()
-    itemForEdit = session.query(Item).filter_by(name=itemname, category=category).one()
-    if itemForEdit.user_id != user.id:
-        flash("You are not authorized to edit that item")
-        return redirect(url_for('showCategoryItems', categoryname=categoryname))
+    itemForEdit = session.query(Item).filter_by(
+        name=itemname, category=category).one()
     if request.method == 'POST':
         if request.form['name']:
             itemForEdit.name = request.form['name']
         if request.form['description']:
             itemForEdit.description = request.form['description']
         if request.form['category']:
-            newcategory = session.query(Category).filter_by(name=request.form['category']).one()
+            newcategory = session.query(Category).filter_by(
+                name=request.form['category']).one()
             itemForEdit.category = newcategory
         if request.files['file']:
             file = request.files['file']
@@ -425,40 +521,73 @@ def editItem(categoryname, itemname):
         session.add(itemForEdit)
         session.commit()
         flash("Item Edited")
-        return redirect(url_for('showCategoryItems', categoryname=categoryname))
+        return redirect(
+            url_for('showCategoryItems', categoryname=categoryname))
     else:
         categories = session.query(Category).all()
-        return render_template('edititem.html', item=itemForEdit, categories=categories, itemimagepath=ITEM_IMAGE_PATH)
+        return render_template(
+            'edititem.html', item=itemForEdit, categories=categories,
+            itemimagepath=ITEM_IMAGE_PATH)
 
-@app.route('/catalog/<string:categoryname>/<string:itemname>/delete', methods=['GET', 'POST'])
+
+@app.route(
+    '/catalog/<string:categoryname>/<string:itemname>/delete',
+    methods=['GET', 'POST'])
+@login_required
+@ownership_required
 def deleteItem(categoryname, itemname):
-    if 'username' not in login_session:
-        return redirect('/login')
+    """
+    delete an catalog item, uses categoryname and itemname (listed  below) to
+    determine which item to delete
+    inputs:
+        :categoryname: <string> the category for which the item belongs,
+            should be the exact name as it exists in the database
+        :itemname: <string> the exact name of the item as it exists in the
+            database
+    outputs:
+        :GET: renders template delete.html
+        :POST: redirect to showCategoryItems after deleting
+    """
     category = session.query(Category).filter_by(name=categoryname).one()
-    itemForDelete = session.query(Item).filter_by(name=itemname, category=category).first()
-    user = getUserInfo()
-    if itemForDelete.user_id != user.id:
-        flash("You are not authorized to delete that item")
-        return redirect(url_for('showCategoryItems', categoryname=categoryname))
+    itemForDelete = session.query(Item).filter_by(
+        name=itemname, category=category).first()
     if request.method == 'POST':
         if itemForDelete.image_url != "":
             try:
-                os.remove(os.path.join("static/", ITEM_IMAGE_PATH, itemForDelete.image_url))
+                os.remove(os.path.join(
+                    "static/", ITEM_IMAGE_PATH, itemForDelete.image_url))
             except OSError:
                 print "file was not deleted"
         session.delete(itemForDelete)
         session.commit()
         flash("Item Deleted")
-        return redirect(url_for('showCategoryItems', categoryname=categoryname))
+        return redirect(
+            url_for('showCategoryItems', categoryname=categoryname))
     else:
         return render_template('deleteitem.html', item=itemForDelete)
+
 
 # This method provides the user an option to remove an item's image without
 # having to delete the image
 @app.route('/catalog/<string:categoryname>/<string:itemname>/image/delete')
+@login_required
 def removeItemImage(categoryname, itemname):
+    """
+    removes the an image for an item.  removes the image file from the server
+    as well as the save image name from the database.  uses categoryname and
+    itemname (listed below) to determine the item to be remodified
+    inputs:
+        :categoryname: <string> the category for which the item belongs,
+            should be the exact name as it exists in the database
+        :itemname: <string> the exact name of the item as it exists in the
+            database
+    outputs:
+        :GET: renders template edititem.html after image deletion and database
+            modification
+    """
     category = session.query(Category).filter_by(name=categoryname).one()
-    item = session.query(Item).filter_by(name=itemname, category=category).first()
+    item = session.query(Item).filter_by(
+        name=itemname, category=category).first()
     try:
         os.remove(os.path.join("static/", ITEM_IMAGE_PATH, item.image_url))
         item.image_url = ""
@@ -468,13 +597,17 @@ def removeItemImage(categoryname, itemname):
     except OSError:
         print "log: file was not deleted"
     categories = session.query(Category).all()
-    return render_template('edititem.html', item=item, categories=categories, itemimagepath=ITEM_IMAGE_PATH)
+    return render_template(
+        'edititem.html', item=item, categories=categories,
+        itemimagepath=ITEM_IMAGE_PATH)
+
 
 # This was used for testing:
-#@app.route('/users')
-#def showUsers():
-#    users = session.query(User).all()
-#    return render_template('users.html', users=users)
+# @app.route('/users')
+# def showUsers():
+#     users = session.query(User).all()
+#     return render_template('users.html', users=users)
+
 
 if __name__ == '__main__':
     app.secret_key = 'secret'
