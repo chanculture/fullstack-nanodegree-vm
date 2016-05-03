@@ -14,10 +14,9 @@ import httplib2
 from flask import make_response
 import requests
 
-# Image Upload
+# Imports for Image Upload
 import os
 from flask import send_from_directory, send_file
-
 
 app = Flask(__name__)
 
@@ -28,7 +27,6 @@ app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024
 
 ITEM_IMAGE_PATH = "images/"
 CLIENT_ID = json.loads(open('g_client_secrets.json', 'r').read())['web']['client_id']
-#APPLICATION_NAME = "Udacity P3: Item Catalog"
 
 # which database are we connecting to
 engine = create_engine('sqlite:///itemcatalog.db')
@@ -55,8 +53,9 @@ def uploadItemImage(file, item):
         # Save the file to the static folder so flask can serve it later
         file.save(os.path.join("static/", ITEM_IMAGE_PATH, filename))
         return filename
-    else:
-        return ""
+    elif not allowed_file(file.filename):
+        flash("Image File Type Not Allowed")
+    return ""
 
 def renameItemFilename(filename, item):
     extension = filename.rsplit('.', 1)[1]
@@ -83,7 +82,6 @@ def gconnect():
         return response
     # Obtain authorization code
     code = request.data
-    print "marker 1"
     try:
         # Upgrade the authorization code into a credentials object
         oauth_flow = flow_from_clientsecrets('g_client_secrets.json', scope='')
@@ -94,7 +92,6 @@ def gconnect():
             json.dumps('Failed to upgrade the authorization code.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
-    print "marker 2"
     # Check that the access token is valid.
     access_token = credentials.access_token
     url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'
@@ -105,7 +102,6 @@ def gconnect():
     if result.get('error') is not None:
         response = make_response(json.dumps(result.get('error')), 500)
         response.headers['Content-Type'] = 'application/json'
-    print "marker 3"
     # Verify that the access token is used for the intended user.
     gplus_id = credentials.id_token['sub']
     if result['user_id'] != gplus_id:
@@ -113,7 +109,6 @@ def gconnect():
             json.dumps("Token's user ID doesn't match given user ID."), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
-    print "marker 4"
     # Verify that the access token is valid for this app.
     if result['issued_to'] != CLIENT_ID:
         response = make_response(
@@ -121,7 +116,6 @@ def gconnect():
         print "Token's client ID does not match app's."
         response.headers['Content-Type'] = 'application/json'
         return response
-    print "marker 5"
     stored_credentials = login_session.get('credentials')
     stored_gplus_id = login_session.get('gplus_id')
     if stored_credentials is not None and gplus_id == stored_gplus_id:
@@ -131,10 +125,8 @@ def gconnect():
         return response
 
     # Store the access token in the session for later use.
-    #login_session['credentials'] = credentials
     login_session['access_token'] = credentials.access_token
     login_session['gplus_id'] = gplus_id
-    print "marker 6"
     # Get user info
     userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
     params = {'access_token': credentials.access_token, 'alt': 'json'}
@@ -149,7 +141,6 @@ def gconnect():
 
     checkUserExists()
 
-    print "marker 7"
     output = ''
     output += '<h1>Welcome, '
     output += login_session['username']
@@ -159,7 +150,6 @@ def gconnect():
     output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
     flash("you are now logged in as %s" % login_session['username'])
     print "done!"
-    print "marker 8"
     return output
 
 @app.route('/gdisconnect')
@@ -181,9 +171,6 @@ def gdisconnect():
     if result['status'] == '200':
         del login_session['access_token']
         del login_session['gplus_id']
-        #del login_session['username']
-        #del login_session['email']
-        #del login_session['picture']
         response = make_response(json.dumps('Successfully disconnected.'), 200)
         response.headers['Content-Type'] = 'application/json'
         return response
@@ -196,14 +183,11 @@ def gdisconnect():
 
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
-    print "in fbconnect"
     if request.args.get('state') != login_session['state']:
-        print "fb error 1"
         response = make_response(json.dumps('Invalid state parameter.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     access_token = request.data
-    print "fb marker 1"
     print "access token received %s " % access_token
 
     app_id = json.loads(open('fb_client_secrets.json', 'r').read())[
@@ -214,13 +198,12 @@ def fbconnect():
         app_id, app_secret, access_token)
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
-    print "fb marker 2"
+
     # Use token to get user info from API
     userinfo_url = "https://graph.facebook.com/v2.4/me"
     # strip expire tag from access token
     token = result.split("&")[0]
 
-    print "fb marker 3"
     url = 'https://graph.facebook.com/v2.4/me?%s&fields=name,id,email' % token
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
@@ -235,7 +218,7 @@ def fbconnect():
     # The token must be stored in the login_session in order to properly logout, let's strip out the information before the equals sign in our token
     stored_token = token.split("=")[1]
     login_session['access_token'] = stored_token
-    print "fb marker 4"
+
     # Get user picture
     url = 'https://graph.facebook.com/v2.4/me/picture?%s&redirect=0&height=200&width=200' % token
     h = httplib2.Http()
@@ -273,7 +256,6 @@ def fbdisconnect():
 # Disconnect based on provider
 @app.route('/disconnect')
 def disconnect():
-    print "in disconnect"
     if 'provider' in login_session:
         if login_session['provider'] == 'google':
             gdisconnect()
@@ -318,6 +300,8 @@ def getUserID(email):
     except:
         return None
 
+# Returns the database user.id if the user already exists
+# (determined by email address)
 def checkUserExists():
     user_id = getUserID(login_session['email'])
     if not user_id:
@@ -397,21 +381,14 @@ def newItem():
                 newItem.image_url = uploadItemImage(file, newItem)
                 session.add(newItem)
                 session.commit()
-            # need a rollback function
             flash("Item Created")
         else:
-            print "duplicate"
-            flash("Item with duplicate name already exists for that category")
-
-        print request.form['preselectedcat']
+            flash("Item with duplicate name already exists for the given category")
 
         if request.form['preselectedcat'] == "yes":
-            print "yes preselected category"
             return redirect(url_for('showCategoryItems', categoryname=category.name))
         else:
-            print "no preselected category"
             return redirect(url_for('showCatalog'))
-
     else:
         categories = session.query(Category).all()
         return render_template('newitem.html', categories=categories, selectedcategory="")
@@ -465,11 +442,10 @@ def deleteItem(categoryname, itemname):
         return redirect(url_for('showCategoryItems', categoryname=categoryname))
     if request.method == 'POST':
         if itemForDelete.image_url != "":
-            # TODO: ensure this delete happens
             try:
                 os.remove(os.path.join("static/", ITEM_IMAGE_PATH, itemForDelete.image_url))
             except OSError:
-                print "log: file was not deleted"
+                print "file was not deleted"
         session.delete(itemForDelete)
         session.commit()
         flash("Item Deleted")
@@ -477,6 +453,8 @@ def deleteItem(categoryname, itemname):
     else:
         return render_template('deleteitem.html', item=itemForDelete)
 
+# This method provides the user an option to remove an item's image without
+# having to delete the image
 @app.route('/catalog/<string:categoryname>/<string:itemname>/image/delete')
 def removeItemImage(categoryname, itemname):
     category = session.query(Category).filter_by(name=categoryname).one()
@@ -486,16 +464,17 @@ def removeItemImage(categoryname, itemname):
         item.image_url = ""
         session.add(item)
         session.commit()
+        flash("Item's Image Was Deleted")
     except OSError:
         print "log: file was not deleted"
-    print "item image deleted"
     categories = session.query(Category).all()
     return render_template('edititem.html', item=item, categories=categories, itemimagepath=ITEM_IMAGE_PATH)
 
-@app.route('/users')
-def showUsers():
-    users = session.query(User).all()
-    return render_template('users.html', users=users)
+# This was used for testing:
+#@app.route('/users')
+#def showUsers():
+#    users = session.query(User).all()
+#    return render_template('users.html', users=users)
 
 if __name__ == '__main__':
     app.secret_key = 'secret'
