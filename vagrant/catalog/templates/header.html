@@ -1,8 +1,8 @@
 <div class="row top-menu">
 	<div class="col-md-4">
 		<a href="{{url_for('showCatalog')}}">
-			<span class="glyphicon glyphicon-home" aria-hidden="true"></span>Home
-		</a>
+		<img class="icon" style="width:16px;height:16px;" src="{{ url_for('static', filename='images/home.png') }}">
+		Home</a>
 	</div>
 	<div class="col-md-4">
 		{% if 'username' in session %}
