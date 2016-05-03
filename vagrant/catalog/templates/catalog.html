@@ -1,6 +1,7 @@
 {% extends "main.html" %}
 {% block content %}
 {% include "header.html" %}
+{% include "flash.html" %}
 
 <div class="row top-menu">
 		<div class="col-md-10"></div>
@@ -15,11 +16,8 @@
 	</div>
 </div>
 <div class="row banner sub1">
-	<div class="col-md-4">
+	<div class="col-md-12">
 		<a href='{{ url_for('newItem') }}'>Add New Item</a>
-	</div>
-	<div class="col-md-8 text-right">
-		<a href='{{ url_for('showUsers') }}'>Show Users</a>
 	</div>
 </div>
 </br>
